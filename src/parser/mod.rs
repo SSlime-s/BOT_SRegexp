@@ -38,7 +38,15 @@ fn class_element(s: &str) -> IResult<&str, ClassElement> {
         Ok((s2, _)) => {
             let res = literal(s2);
             match res {
-                Ok((s, Literal::Char(second))) => Ok((s, ClassElement::Range(first_char, second))),
+                Ok((s, Literal::Char(second))) => {
+                    if first_char > second {
+                        return Err(nom::Err::Error(nom::error::Error::new(
+                            s,
+                            nom::error::ErrorKind::Tag,
+                        )));
+                    }
+                    Ok((s, ClassElement::Range(first_char, second)))
+                }
                 Ok((_, Literal::Escape(_))) => Ok((s, ClassElement::Literal(first))),
                 Err(_) => Ok((s, ClassElement::Literal(first))),
             }
