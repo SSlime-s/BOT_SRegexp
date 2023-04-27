@@ -105,10 +105,13 @@ dependencies = [
  "env_logger",
  "log",
  "nom",
+ "once_cell",
  "rand",
  "regex",
  "sqlx",
+ "tokio",
  "traq-ws-bot",
+ "uuid",
 ]
 
 [[package]]
@@ -1504,6 +1507,8 @@ dependencies = [
  "percent-encoding",
  "rand",
  "rsa",
+ "rustls",
+ "rustls-pemfile",
  "sha1",
  "sha2",
  "smallvec",
@@ -1511,7 +1516,9 @@ dependencies = [
  "sqlx-rt",
  "stringprep",
  "thiserror",
+ "tokio-stream",
  "url",
+ "webpki-roots",
 ]
 
 [[package]]
@@ -1538,6 +1545,11 @@ name = "sqlx-rt"
 version = "0.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "804d3f245f894e61b1e6263c84b23ca675d96753b5abfd5cc8597d86806e8024"
+dependencies = [
+ "once_cell",
+ "tokio",
+ "tokio-rustls",
+]
 
 [[package]]
 name = "stringprep"
@@ -1671,6 +1683,17 @@ dependencies = [
  "rustls",
  "tokio",
  "webpki",
+]
+
+[[package]]
+name = "tokio-stream"
+version = "0.1.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "397c988d37662c7dda6d2208364a706264bf3d6138b11d436cbac0ad38832842"
+dependencies = [
+ "futures-core",
+ "pin-project-lite",
+ "tokio",
 ]
 
 [[package]]
