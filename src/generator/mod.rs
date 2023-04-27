@@ -2,7 +2,7 @@ use crate::model::{ClassElement, Expression, Factor, Literal, Term, TermSuffix, 
 use anyhow::Result;
 use rand::Rng;
 
-trait Generate {
+pub trait Generate {
     fn generate(&self, rng: &mut impl Rng) -> Result<String>;
 }
 

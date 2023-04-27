@@ -153,9 +153,21 @@ fn terms(s: &str) -> IResult<&str, Terms> {
     Ok((s, Terms::Concat(terms)))
 }
 
-pub fn expression(s: &str) -> IResult<&str, Expression> {
+fn expression(s: &str) -> IResult<&str, Expression> {
     let (s, contents) = nom::multi::separated_list1(nom::character::complete::char('|'), terms)(s)?;
     Ok((s, Expression::Union(contents)))
+}
+
+pub fn parse(s: &str) -> Result<Expression, nom::Err<nom::error::Error<&str>>> {
+    let (s, expression) = expression(s)?;
+    if s.is_empty() {
+        Ok(expression)
+    } else {
+        Err(nom::Err::Error(nom::error::Error::new(
+            s,
+            nom::error::ErrorKind::Eof,
+        )))
+    }
 }
 
 #[cfg(test)]
