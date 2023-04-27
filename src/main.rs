@@ -1,6 +1,7 @@
 mod generator;
 mod model;
 mod parser;
+mod handler;
 
 use generator::Generate;
 
