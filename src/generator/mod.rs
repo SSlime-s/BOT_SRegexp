@@ -86,7 +86,13 @@ impl Generate for Term {
                         n
                     }
                     TermSuffix::Range(a, b) => rng.gen_range(*a..=*b),
-                    TermSuffix::OpenRange(a) => rng.gen_range(*a..=(*a + 10)),
+                    TermSuffix::OpenRange(a) => {
+                        let mut n = *a;
+                        while rng.gen_bool(0.5) {
+                            n += 1;
+                        }
+                        n
+                    }
                     TermSuffix::Repeat(a) => *a,
                 };
                 match f {
