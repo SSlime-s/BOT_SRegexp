@@ -9,14 +9,6 @@ pub enum ClassElement {
     Range(char, char),
     Literal(Literal),
 }
-impl ClassElement {
-    pub fn size(&self) -> usize {
-        match *self {
-            ClassElement::Range(a, b) => (b as usize) - (a as usize) + 1,
-            ClassElement::Literal(_) => 1,
-        }
-    }
-}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Token {

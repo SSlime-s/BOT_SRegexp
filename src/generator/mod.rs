@@ -10,6 +10,22 @@ impl Generate for Literal {
     fn generate(&self, _rng: &mut impl Rng) -> Result<String> {
         match self {
             Literal::Char(c) => Ok(c.to_string()),
+            Literal::Escape('d') => Ok(rand::thread_rng().gen_range(0..=9).to_string()),
+            Literal::Escape('w') => {
+                let mut rng = rand::thread_rng();
+                let c = match rng.gen_range(0..=61) {
+                    x @ 0..=25 => b'a' + x,
+                    x @ 26..=51 => b'A' + x - 26,
+                    x @ 52..=61 => b'0' + x - 52,
+                    _ => b'-',
+                };
+                Ok(std::char::from_u32(c as u32)
+                    .ok_or_else(|| anyhow::anyhow!("Invalid range"))?
+                    .to_string())
+            }
+            Literal::Escape('a'..='z') => Err(anyhow::anyhow!("Invalid escape")),
+            Literal::Escape('A'..='Z') => Err(anyhow::anyhow!("Invalid escape")),
+            Literal::Escape('0'..='9') => Err(anyhow::anyhow!("Invalid escape")),
             Literal::Escape(c) => Ok(c.to_string()),
         }
     }
@@ -30,6 +46,16 @@ impl Generate for ClassElement {
                     .to_string())
             }
             ClassElement::Literal(l) => l.generate(rng),
+        }
+    }
+}
+impl ClassElement {
+    pub fn size(&self) -> usize {
+        match *self {
+            ClassElement::Range(a, b) => (b as usize) - (a as usize) + 1,
+            ClassElement::Literal(Literal::Escape('d')) => 10,
+            ClassElement::Literal(Literal::Escape('w')) => 26 + 26 + 10 + 1,
+            ClassElement::Literal(_) => 1,
         }
     }
 }
