@@ -149,3 +149,203 @@ pub fn expression(s: &str) -> IResult<&str, Expression> {
     let (s, contents) = nom::multi::separated_list1(nom::character::complete::char('|'), terms)(s)?;
     Ok((s, Expression::Union(contents)))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn a_expr() -> Expression {
+        Expression::Union(vec![Terms::Concat(vec![Term::Factor(Factor::Token(
+            Token::Literal(Literal::Char('a')),
+        ))])])
+    }
+
+    fn a_or_b_expr() -> Expression {
+        Expression::Union(vec![
+            Terms::Concat(vec![Term::Factor(Factor::Token(Token::Literal(
+                Literal::Char('a'),
+            )))]),
+            Terms::Concat(vec![Term::Factor(Factor::Token(Token::Literal(
+                Literal::Char('b'),
+            )))]),
+        ])
+    }
+
+    fn a_or_b_or_c_expr() -> Expression {
+        Expression::Union(vec![
+            Terms::Concat(vec![Term::Factor(Factor::Token(Token::Literal(
+                Literal::Char('a'),
+            )))]),
+            Terms::Concat(vec![Term::Factor(Factor::Token(Token::Literal(
+                Literal::Char('b'),
+            )))]),
+            Terms::Concat(vec![Term::Factor(Factor::Token(Token::Literal(
+                Literal::Char('c'),
+            )))]),
+        ])
+    }
+
+    #[test]
+    fn test_literal() {
+        assert_eq!(literal("a"), Ok(("", Literal::Char('a'))));
+        assert_eq!(literal("ab"), Ok(("b", Literal::Char('a'))));
+        assert_eq!(literal(r"\a"), Ok(("", Literal::Escape('a'))));
+        assert_eq!(literal(r"\ab"), Ok(("b", Literal::Escape('a'))));
+    }
+
+    #[test]
+    fn test_class_element() {
+        assert_eq!(
+            class_element("a"),
+            Ok(("", ClassElement::Literal(Literal::Char('a'))))
+        );
+        assert_eq!(
+            class_element(r"\a"),
+            Ok(("", ClassElement::Literal(Literal::Escape('a'))))
+        );
+        assert_eq!(
+            class_element(r"a-z"),
+            Ok(("", ClassElement::Range('a', 'z')))
+        );
+        assert_eq!(
+            class_element(r"\a-z"),
+            Ok(("-z", ClassElement::Literal(Literal::Escape('a'))))
+        );
+        assert_eq!(
+            class_element(r"a-\z"),
+            Ok((r"-\z", ClassElement::Literal(Literal::Char('a'))))
+        );
+        assert_eq!(
+            class_element(r"-a-z"),
+            Ok(("a-z", ClassElement::Literal(Literal::Char('-'))))
+        );
+        assert_eq!(
+            class_element(r"a-z-"),
+            Ok(("-", ClassElement::Range('a', 'z')))
+        );
+        assert_eq!(
+            class_element(r"a-"),
+            Ok(("-", ClassElement::Literal(Literal::Char('a'))))
+        );
+    }
+
+    #[test]
+    fn test_token_class() {
+        assert_eq!(
+            token("[a]"),
+            Ok((
+                "",
+                Token::Class(vec![ClassElement::Literal(Literal::Char('a'))])
+            ))
+        );
+        assert_eq!(
+            token("[ab]"),
+            Ok((
+                "",
+                Token::Class(vec![
+                    ClassElement::Literal(Literal::Char('a')),
+                    ClassElement::Literal(Literal::Char('b'))
+                ])
+            ))
+        );
+        assert_eq!(
+            token("[a-z]"),
+            Ok(("", Token::Class(vec![ClassElement::Range('a', 'z')])))
+        );
+        assert_eq!(
+            token("[a-z0-9]"),
+            Ok((
+                "",
+                Token::Class(vec![
+                    ClassElement::Range('a', 'z'),
+                    ClassElement::Range('0', '9')
+                ])
+            ))
+        );
+        assert_eq!(
+            token("[a-z0-9-]"),
+            Ok((
+                "",
+                Token::Class(vec![
+                    ClassElement::Range('a', 'z'),
+                    ClassElement::Range('0', '9'),
+                    ClassElement::Literal(Literal::Char('-'))
+                ])
+            ))
+        );
+        assert_eq!(
+            token(r"[a-z0-9\]]"),
+            Ok((
+                "",
+                Token::Class(vec![
+                    ClassElement::Range('a', 'z'),
+                    ClassElement::Range('0', '9'),
+                    ClassElement::Literal(Literal::Escape(']'))
+                ])
+            ))
+        );
+        assert_eq!(
+            token(r"[\]]"),
+            Ok((
+                "",
+                Token::Class(vec![ClassElement::Literal(Literal::Escape(']'))])
+            ))
+        );
+    }
+
+    #[test]
+    fn test_token_literal() {
+        assert_eq!(token("a"), Ok(("", Token::Literal(Literal::Char('a')))));
+        assert_eq!(token(r"\a"), Ok(("", Token::Literal(Literal::Escape('a')))));
+        assert_eq!(
+            token(r"\ab"),
+            Ok(("b", Token::Literal(Literal::Escape('a'))))
+        );
+    }
+
+    #[test]
+    fn test_expression() {
+        assert_eq!(expression("a"), Ok(("", a_expr())));
+        assert_eq!(expression("a|b"), Ok(("", a_or_b_expr())));
+        assert_eq!(expression("a|b|c"), Ok(("", a_or_b_or_c_expr())));
+    }
+
+    #[test]
+    fn test_factor_group() {
+        assert_eq!(factor("(a)"), Ok(("", Factor::Group(Box::new(a_expr())))));
+        assert_eq!(
+            factor("(a|b)"),
+            Ok(("", Factor::Group(Box::new(a_or_b_expr()))))
+        );
+        assert_eq!(
+            factor("(a|b|c)"),
+            Ok(("", Factor::Group(Box::new(a_or_b_or_c_expr()))))
+        );
+
+        assert_eq!(
+            factor("(a|b)c"),
+            Ok(("c", Factor::Group(Box::new(a_or_b_expr()))))
+        );
+    }
+
+    #[test]
+    fn test_factor_fixed_group() {
+        assert_eq!(
+            factor("<a>"),
+            Ok(("", Factor::FixedGroup(Box::new(a_expr()))))
+        );
+        assert_eq!(
+            factor("<a|b>"),
+            Ok(("", Factor::FixedGroup(Box::new(a_or_b_expr()))))
+        );
+        assert_eq!(
+            factor("<a|b|c>"),
+            Ok(("", Factor::FixedGroup(Box::new(a_or_b_or_c_expr()))))
+        );
+
+        assert_eq!(
+            factor("<a|b>c"),
+            Ok(("c", Factor::FixedGroup(Box::new(a_or_b_expr()))))
+        );
+    }
+}
