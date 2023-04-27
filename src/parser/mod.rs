@@ -356,4 +356,24 @@ mod tests {
             Ok(("c", Factor::FixedGroup(Box::new(a_or_b_expr()))))
         );
     }
+
+    #[test]
+    fn test_term_suffix_repeat() {
+        assert_eq!(
+            term_suffix("{5}"),
+            Ok(("", TermSuffix::Repeat(5)))
+        );
+        assert_eq!(
+            term_suffix("{5,}"),
+            Ok(("", TermSuffix::OpenRange(5)))
+        );
+        assert_eq!(
+            term_suffix("{5,10}"),
+            Ok(("", TermSuffix::Range(5, 10)))
+        );
+        assert_eq!(
+            term_suffix("{100}"),
+            Ok(("", TermSuffix::Repeat(100)))
+        );
+    }
 }
