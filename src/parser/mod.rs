@@ -126,7 +126,7 @@ fn term_suffix(s: &str) -> IResult<&str, TermSuffix> {
                     ))),
                 )),
                 nom::character::complete::char('}'),
-            )(s2)?;
+            )(s)?;
 
             let digit_error =
                 |_| nom::Err::Error(nom::error::Error::new(s, nom::error::ErrorKind::Digit));
