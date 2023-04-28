@@ -206,9 +206,10 @@ pub fn parse_command(input: &str) -> Result<Command> {
     let content = input.trim();
     let splitted = content.split_whitespace().collect::<Vec<_>>();
 
-    if splitted.is_empty() || !splitted[0].starts_with("/") {
-        return Err(anyhow::anyhow!("Optional: / で始まるコマンドが必須です"));
-    }
+    anyhow::ensure!(
+        splitted.first().map_or(false, |x| x.starts_with('/')),
+        "Optional: / で始まるコマンドが必須です"
+    );
 
     match &splitted[0][1..] {
         command @ ("regex" | "regexp" | "rand" | "random" | "randregex") => {
@@ -216,9 +217,7 @@ pub fn parse_command(input: &str) -> Result<Command> {
             Ok(Command::RandRegexp(rest.to_string()))
         }
         command @ ("save" | "memory") => {
-            if splitted.len() < 2 {
-                return Err(anyhow::anyhow!("key が必須です"));
-            }
+            anyhow::ensure!(splitted.len() >= 2, "key が必須です");
 
             let rest = content.trim_start_matches(&format!("/{command}")).trim();
             let key = splitted[1].to_string();
@@ -226,28 +225,21 @@ pub fn parse_command(input: &str) -> Result<Command> {
             Ok(Command::Save { key, value })
         }
         command @ ("call" | "load") => {
-            if splitted.len() < 2 {
-                return Err(anyhow::anyhow!("key が必須です"));
-            }
-            if splitted.len() > 2 {
-                return Err(anyhow::anyhow!("key に空白を含めることはできません"));
-            }
+            anyhow::ensure!(splitted.len() >= 2, "key が必須です");
+            anyhow::ensure!(splitted.len() <= 2, "key に空白を含めることはできません");
 
             let rest = content.trim_start_matches(&format!("/{command}")).trim();
             Ok(Command::Call(rest.to_string()))
         }
         command @ ("remove" | "delete" | "forget") => {
-            if splitted.len() < 2 {
-                return Err(anyhow::anyhow!("key が必須です"));
-            }
-            if splitted.len() > 2 {
-                return Err(anyhow::anyhow!("key に空白を含めることはできません"));
-            }
+            anyhow::ensure!(splitted.len() >= 2, "key が必須です");
+            anyhow::ensure!(splitted.len() <= 2, "key に空白を含めることはできません");
+
             let rest = content.trim_start_matches(&format!("/{command}")).trim();
             Ok(Command::Remove(rest.to_string()))
         }
         "join" => Ok(Command::Join),
         "leave" | "bye" => Ok(Command::Leave),
-        unknown => Err(anyhow::anyhow!("unknown command /{}", unknown)),
+        unknown => anyhow::bail!("unknown command /{}", unknown),
     }
 }

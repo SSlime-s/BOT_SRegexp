@@ -23,9 +23,9 @@ impl Generate for Literal {
                     .ok_or_else(|| anyhow::anyhow!("Invalid range"))?
                     .to_string())
             }
-            Literal::Escape('a'..='z') => Err(anyhow::anyhow!("Invalid escape")),
-            Literal::Escape('A'..='Z') => Err(anyhow::anyhow!("Invalid escape")),
-            Literal::Escape('0'..='9') => Err(anyhow::anyhow!("Invalid escape")),
+            Literal::Escape('a'..='z') => anyhow::bail!("Invalid escape"),
+            Literal::Escape('A'..='Z') => anyhow::bail!("Invalid escape"),
+            Literal::Escape('0'..='9') => anyhow::bail!("Invalid escape"),
             Literal::Escape(c) => Ok(c.to_string()),
         }
     }
@@ -37,9 +37,9 @@ impl Generate for ClassElement {
             ClassElement::Range(a, b) => {
                 let a = *a as usize;
                 let b = *b as usize;
-                if a > b {
-                    return Err(anyhow::anyhow!("Invalid range"));
-                }
+
+                anyhow::ensure!(a <= b, "Invalid range");
+
                 let c = rng.gen_range(a..=b);
                 Ok(std::char::from_u32(c as u32)
                     .ok_or_else(|| anyhow::anyhow!("Invalid range"))?
@@ -74,7 +74,7 @@ impl Generate for Token {
                     }
                     r -= s;
                 }
-                Err(anyhow::anyhow!("Invalid class"))
+                anyhow::bail!("Invalid class")
             }
         }
     }
