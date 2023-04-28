@@ -17,7 +17,7 @@ impl Generate for Literal {
                     x @ 0..=25 => b'a' + x,
                     x @ 26..=51 => b'A' + x - 26,
                     x @ 52..=61 => b'0' + x - 52,
-                    _ => b'-',
+                    _ => b'_',
                 };
                 Ok(std::char::from_u32(c as u32)
                     .ok_or_else(|| anyhow::anyhow!("Invalid range"))?
