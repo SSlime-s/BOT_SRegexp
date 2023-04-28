@@ -1,10 +1,15 @@
 use std::{convert::identity, sync::Arc};
 
 use anyhow::Result;
-use traq_ws_bot::events::{common::Message, payload};
+use once_cell::sync::Lazy;
+use regex::Regex;
+use traq_ws_bot::{
+    events::{common::Message, payload},
+    utils::is_mentioned_message,
+};
 
 use crate::{
-    config::Resource,
+    config::{Resource, BOT_NAME, BOT_USER_ID},
     generator::Generate,
     model::{
         api::{join_channel, leave_channel, send_message},
@@ -14,8 +19,12 @@ use crate::{
 };
 
 /// like !{\"type\":\"user\",\"raw\":\"@BOT_STimer\",\"id\":\"d352688f-a656-4444-8c5f-caa517e9ea1b\"}
-const MENTION_REGEX: &str =
-    r#"!\{"type":"user","raw":"(?:[^\\"]|\\.)+","id":"d352688f-a656-4444-8c5f-caa517e9ea1b"\}"#;
+static MENTION_REGEX: Lazy<String> = Lazy::new(|| {
+    format!(
+        r#"!\{{"type":"user","raw":"@{}","id":"{}"\}}"#,
+        BOT_NAME, BOT_USER_ID
+    )
+});
 
 const SPECIAL_MESSAGE_REGEX: &str =
     r#"!\{"type":"(user|channel|group)","raw":"(?P<raw>(?:[^\\"]|\\.)+)","id":"(?:[^\\"]|\\.)+"\}"#;
@@ -45,18 +54,35 @@ async fn message_like_handler(message: Message, resource: Arc<Resource>) {
         return;
     }
 
-    // TODO: handle mentioned message
-    let content = message.text;
+    let (content, has_mention) = if is_mentioned_message(&message, BOT_USER_ID) {
+        let content = Regex::new(&MENTION_REGEX)
+            .unwrap()
+            .replace_all(&message.text, "")
+            .to_string();
+        (content, true)
+    } else {
+        (message.text, false)
+    };
 
-    let Ok(command) = parse_command(&content)
-        else {
-            todo!()
-        };
+    let content = Regex::new(SPECIAL_MESSAGE_REGEX)
+        .unwrap()
+        .replace_all(&content, "${raw}")
+        .to_string();
+    log::debug!("Parsed message: {:?}", content);
+
+    let command = match parse_command(&content) {
+        Ok(command) => command,
+        Err(e) => {
+            log::error!("Failed to parse command: {:?}", e);
+            // TODO: send error message
+            return;
+        }
+    };
 
     match command {
         Command::RandRegexp(regexp) => {
             let text = generate_text(&regexp).await.unwrap_or_else(identity);
-            let res = send_message(&message.channel_id, &text, false).await;
+            let res = send_message(&message.channel_id, &text, true).await;
             if let Err(e) = res {
                 log::error!("Failed to send message: {:?}", e);
             }
@@ -81,7 +107,7 @@ async fn message_like_handler(message: Message, resource: Arc<Resource>) {
                     }
                 }
             };
-            let res = send_message(&message.channel_id, &text, false).await;
+            let res = send_message(&message.channel_id, &text, true).await;
             if let Err(e) = res {
                 log::error!("Failed to send message: {:?}", e);
             }
@@ -98,7 +124,7 @@ async fn message_like_handler(message: Message, resource: Arc<Resource>) {
                     format!("Failed to get from database: {}", e)
                 }
             };
-            let res = send_message(&message.channel_id, &text, false).await;
+            let res = send_message(&message.channel_id, &text, true).await;
             if let Err(e) = res {
                 log::error!("Failed to send message: {:?}", e);
             }
@@ -119,7 +145,7 @@ async fn message_like_handler(message: Message, resource: Arc<Resource>) {
                 }
             };
 
-            let res = send_message(&message.channel_id, &text, false).await;
+            let res = send_message(&message.channel_id, &text, true).await;
             if let Err(e) = res {
                 log::error!("Failed to send message: {:?}", e);
             }

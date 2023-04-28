@@ -2,6 +2,9 @@ use std::env;
 
 use once_cell::sync::Lazy;
 
+/// この BOT の NAME
+pub const BOT_NAME: &str = "BOT_SRegexp";
+
 /// この BOT の UUID
 pub const BOT_ID: &str = "6404a6b2-6f1e-4471-bcec-8352bcf0a83a";
 
