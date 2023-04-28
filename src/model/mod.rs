@@ -1,5 +1,5 @@
-pub mod db;
 pub mod api;
+pub mod db;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Literal {
