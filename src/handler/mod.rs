@@ -174,6 +174,13 @@ async fn message_like_handler(message: Message, resource: Arc<Resource>) {
                 log::error!("Failed to leave channel: {:?}", e);
             }
         }
+        Command::Help => {
+            let text = "[README](https://github.com/SSlime-s/BOT_SRegexp/blob/main/README.md)";
+            let res = send_message(&message.channel_id, text, true).await;
+            if let Err(e) = res {
+                log::error!("Failed to send message: {:?}", e);
+            }
+        }
     }
 }
 
@@ -199,6 +206,7 @@ pub enum Command {
     Remove(String),
     Join,
     Leave,
+    Help,
 }
 
 /// エラーの prefix に `Optional: ` がある場合は、メンション時にしかエラーを表示しない
@@ -240,6 +248,7 @@ pub fn parse_command(input: &str) -> Result<Command> {
         }
         "join" => Ok(Command::Join),
         "leave" | "bye" => Ok(Command::Leave),
+        "help" | "usage" | "readme" => Ok(Command::Help),
         unknown => anyhow::bail!("unknown command /{}", unknown),
     }
 }
