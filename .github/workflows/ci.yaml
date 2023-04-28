@@ -1,0 +1,156 @@
+name: main
+on:
+  push:
+    branches:
+      - "main"
+env:
+  GITEA_SSH_URL: "ssh://git@git.trap.jp:2200/SSlime/BOT_SRegexp.git"
+  BIN_NAME: "bot-randregex"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Cache Rust
+        uses: ./.github/actions/cache_rust
+      - name: Build
+        run: cargo build
+
+  release-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Add Target
+        run: rustup target add x86_64-unknown-linux-musl
+      - name: Install musl-tools
+        run: sudo apt-get install musl-tools
+      - name: Cache Rust
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-release-musl-${{ hashFiles('**/Cargo.lock') }}
+      - name: Build
+        run: cargo build --release --target x86_64-unknown-linux-musl
+      - name: Cache Build
+        uses: actions/cache@v3
+        with:
+          path: target/x86_64-unknown-linux-musl/release/${{ env.BIN_NAME }}
+          key: build-release-musl-${{ hashFiles('src/**/*.rs', 'Cargo.lock', 'Cargo.toml') }}
+
+  test:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Restore Cache
+        uses: ./.github/actions/cache_rust
+
+      - name: Cargo Test
+        run: cargo test
+
+  fmt:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Restore Cache
+        uses: ./.github/actions/cache_rust
+
+      - name: Cargo fmt
+        run: cargo fmt --all -- --check
+
+  clippy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Restore Cache
+        uses: ./.github/actions/cache_rust
+
+      - name: Cargo clippy
+        run: cargo clippy # -- -D warnings
+
+  doc:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    needs:
+      - build
+      - test
+      - fmt
+      - clippy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Restore Cache
+        uses: ./.github/actions/cache_rust
+
+      - name: Cargo doc
+        run: cargo doc --no-deps
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v1
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v1
+        with:
+          path: target/doc/
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@main
+
+  sync:
+    needs:
+      - release-build
+      - test
+      - fmt
+      - clippy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Restore Cache
+        uses: actions/cache@v3
+        with:
+          path: target/x86_64-unknown-linux-musl/release/${{ env.BIN_NAME }}
+          key: build-release-musl-${{ hashFiles('src/**/*.rs', 'Cargo.lock', 'Cargo.toml') }}
+      - name: Add To LFS
+        run: git lfs track "./target/x86_64-unknown-linux-musl/release/${{ env.BIN_NAME }}"
+      - name: Set Config
+        run: |
+          echo "${{ secrets.GITEA_TOKEN }}" > ~/deploy_key.pem
+          chmod 600 ~/deploy_key.pem
+          git config --local user.email "github@actions"
+          git config --local user.name "github"
+      - name: Commit (include build)
+        run: |
+          git add ./target/x86_64-unknown-linux-musl/release/${{ env.BIN_NAME }} -f
+          git add .gitattributes
+          git commit -m "[build] ${{ github.event.head_commit.id }}"
+      - name: Push Changes
+        env:
+          GIT_SSH_COMMAND: ssh -i ~/deploy_key.pem -o StrictHostKeyChecking=no -F /dev/null
+        run: |
+          git fetch --unshallow origin
+          git push -f ${{ env.GITEA_SSH_URL }} main:master

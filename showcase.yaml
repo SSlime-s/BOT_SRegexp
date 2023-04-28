@@ -1,0 +1,15 @@
+type: "runtime"
+
+startup: |-
+  wget https://github.com/git-lfs/git-lfs/releases/download/v3.3.0/git-lfs-linux-amd64-v3.3.0.tar.gz
+  tar -xf git-lfs-linux-amd64-v3.3.0.tar.gz
+  ./git-lfs-3.3.0/install.sh
+  git lfs install
+  git pull "https://SSlime:${GIT_ACCESS_TOKEN}@git.trap.jp:2200/SSlime/BOT_SRegexp.git" master
+  git lfs pull "https://SSlime:${GIT_ACCESS_TOKEN}@git.trap.jp:2200/SSlime/BOT_SRegexp.git" master
+
+entrypoint: "./target/x86_64-unknown-linux-musl/release/bot-randregex"
+
+http_proxy: 8080
+
+internal: hard
