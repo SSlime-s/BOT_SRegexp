@@ -212,7 +212,7 @@ pub fn parse_command(input: &str) -> Result<Command> {
     );
 
     match &splitted[0][1..] {
-        command @ ("regex" | "regexp" | "rand" | "random" | "randregex") => {
+        command @ ("regex" | "regexp" | "rand" | "random" | "randregex" | "randregexp") => {
             let rest = content.trim_start_matches(&format!("/{command}")).trim();
             Ok(Command::RandRegexp(rest.to_string()))
         }
