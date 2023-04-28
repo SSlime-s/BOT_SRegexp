@@ -74,7 +74,19 @@ async fn message_like_handler(message: Message, resource: Arc<Resource>) {
         Ok(command) => command,
         Err(e) => {
             log::error!("Failed to parse command: {:?}", e);
-            // TODO: send error message
+            let text = if e.to_string().starts_with("Optional: ") {
+                if has_mention {
+                    e.to_string().replace("Optional: ", "")
+                } else {
+                    return;
+                }
+            } else {
+                e.to_string()
+            };
+            let res = send_message(&message.channel_id, &text, true).await;
+            if let Err(e) = res {
+                log::error!("Failed to send message: {:?}", e);
+            }
             return;
         }
     };
@@ -189,12 +201,13 @@ pub enum Command {
     Leave,
 }
 
+/// エラーの prefix に `Optional: ` がある場合は、メンション時にしかエラーを表示しない
 pub fn parse_command(input: &str) -> Result<Command> {
     let content = input.trim();
     let splitted = content.split_whitespace().collect::<Vec<_>>();
 
     if splitted.is_empty() || !splitted[0].starts_with("/") {
-        return Err(anyhow::anyhow!("/ で始まるコマンドが必須です"));
+        return Err(anyhow::anyhow!("Optional: / で始まるコマンドが必須です"));
     }
 
     match &splitted[0][1..] {
