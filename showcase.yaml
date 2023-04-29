@@ -12,4 +12,6 @@ entrypoint: "./target/x86_64-unknown-linux-musl/release/bot-randregex"
 
 http_proxy: 8080
 
+use_mariadb: true
+
 internal: hard
