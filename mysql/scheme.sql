@@ -9,5 +9,5 @@ CREATE TABLE IF NOT EXISTS `regexps` (
   `regexp` TEXT NOT NULL,
   `user_id` CHAR(36) NOT NULL,
   `user_name` VARCHAR(32) NOT NULL,
-  `created_at` DATETIME NOT NULL
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
