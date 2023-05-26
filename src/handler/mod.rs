@@ -256,6 +256,6 @@ pub fn parse_command(input: &str) -> Result<Command> {
         "join" => Ok(Command::Join),
         "leave" | "bye" => Ok(Command::Leave),
         "help" | "usage" | "readme" => Ok(Command::Help),
-        unknown => anyhow::bail!("unknown command /{}", unknown),
+        unknown => anyhow::bail!("Optional: unknown command /{}", unknown),
     }
 }
