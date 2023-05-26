@@ -7,7 +7,6 @@ mod parser;
 use traq_ws_bot::builder;
 
 use crate::{config::BOT_ACCESS_TOKEN, model::db::connect_db};
-use generator::Generate;
 
 #[tokio::main]
 async fn main() {
