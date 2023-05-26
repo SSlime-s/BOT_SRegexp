@@ -73,7 +73,14 @@ async fn message_like_handler(message: Message, resource: Arc<Resource>) {
     let command = match parse_command(&content) {
         Ok(command) => command,
         Err(e) => {
-            log::error!("Failed to parse command: {:?}", e);
+            {
+                let err_msg = format!("Failed to parse command: {:?}", e);
+                if has_mention {
+                    log::error!("{}", err_msg);
+                } else {
+                    log::debug!("{}", err_msg);
+                }
+            }
             let text = if e.to_string().starts_with("Optional: ") {
                 if has_mention {
                     e.to_string().replace("Optional: ", "")
