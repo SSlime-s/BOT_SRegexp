@@ -68,10 +68,7 @@ pub async fn remove(pool: &MySqlPool, key: &str, user_id: &str) -> sqlx::Result<
 
 #[derive(sqlx::FromRow, Debug)]
 pub struct Regexp {
-    pub key: String,
     pub regexp: String,
-    pub user_id: String,
-    pub user_name: String,
 }
 pub async fn get(pool: &MySqlPool, key: &str) -> sqlx::Result<Option<String>> {
     let query = r#"
